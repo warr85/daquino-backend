@@ -1,0 +1,67 @@
+﻿create TABLE uds006(
+id serial not null, 
+description varchar(18) not null, 
+constraint uds006_PK primary key(id), 
+constraint uds006_UQ unique(description), 
+constraint uds006_description_CK check(char_length(description)>0) 
+);
+
+ALTER TABLE public.uds006  OWNER TO postgres;
+comment on table uds006 is 'Records the Modules';
+comment on column uds006.id is 'Status Identifier, primary attribute from entity ubs006';
+comment on column uds006.description is 'Status description';
+
+create TABLE uds001 (
+    	id serial NOT NULL,
+    	description character varying(18) NOT NULL,
+    	idUds006 integer not null default 2,
+    	constraint uds001_PK primary key(id), 
+	constraint uds001_UQ unique(description), 
+	constraint uds001_06_FK foreign key(idUds006) references uds006(id), 
+	constraint uds001_description_CK check(char_length(description)>4) 
+);
+
+
+ALTER TABLE public.uds001  OWNER TO wilmer;
+comment on table uds001 is 'Records the user system';
+comment on column uds001.id is 'User Identifier, primary attribute from entity ubs001';
+comment on column uds001.description is 'User description';
+
+
+
+create TABLE uds002 (
+id serial not null, 
+description varchar(22) not null, 
+idUds006 integer not null default 2, 
+constraint uds002_PK primary key(id), 
+constraint uds002_UQ unique(description), 
+constraint uds002_06_FK foreign key(idUds006) references uds006(id), 
+constraint uds002_description check(char_length(description)>4) 
+);
+
+ALTER TABLE public.uds002  OWNER TO wilmer;
+comment on table uds002 is 'Records of Group';
+comment on column uds002.id is 'group Identifier, primary attribute from entity ubs002';
+comment on column uds002.description is 'Group description';
+
+
+Insert into uds006(description) values ('Active'),('Inactive');
+
+create TABLE uds0201 (
+id serial not null, 
+idUds001 integer not null, 
+idUds002 integer not null, 
+idUds006 integer not null default 1, 
+constraint uds0201_PK primary key(id), 
+constraint uds0201_UQ unique(idUds001,idUds002), 
+constraint uds0201_01_FK foreign key(idUds001) references uds001(id), 
+constraint uds0201_02_FK foreign key(idUds002) references uds002(id),
+constraint uds0201_06_FK foreign key(idUds006) references uds006(id) 
+
+); 
+
+ALTER TABLE public.uds0201  OWNER TO wilmer;
+comment on table uds0201 is 'Records the Membership';
+comment on column uds0201.id is 'Membership Identifier, primary attribute from entity ubs0201';
+comment on column uds0201.idUds002 is 'Identifier from group';
+comment on column uds0201.idUds001 is 'Identifier from user';
