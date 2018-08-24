@@ -21,136 +21,16 @@ class UserController extends Controller
 
         
 
-        // whatever *your* User object is
-        /*$user = new User();
-        $plainPassword = 'wilmer';
-        $encoded = $encoder->encodePassword($user, $plainPassword);
-        
-        $user->setUsername("wramones");
-        $user->setPlainPassword($plainPassword);
-        $user->setEmail("wilmer.ramones@gmail.com");
-        $user->setPassword($encoded);    
-
-        $em = $this->getDoctrine()->getManager();
-        $em->persist($user);
-        $em->flush();*/
-
-        $em = $this->getDoctrine()->getManager();
-        $user = $em->getRepository("AppBundle:User")->findAll();
-
-        $helper = $this->get(Helpers::class);
-        return $helper->json(array(
-            "Status" => "200",
-            "usuarios" => $user
-        ));
-
-        /*die();
-
-        return new JsonResponse(array(
-            "Status" => "200",
-            "usuarios" => $user
-        ));
-
-        die();*/
-
-
-        // replace this example code with whatever you need
-        return $this->render('default/index.html.twig', [
-            'base_dir' => realpath($this->getParameter('kernel.project_dir')).DIRECTORY_SEPARATOR,
-        ]);
-    }
-
-
-    /**
-     * @Route("/login", name="login", methods={"POST"}))     
-     */
-
-    public function loginAction(Request $request){
-        $helper = $this->get(Helpers::class);
-        //lo que viene
-        $json = $request->get("json", null);
-
        
-
-        if($json != null){
-            $params = json_decode($json);
-            $username = (isset($params->username) ? $params->username : null);
-            $plainPassword = (isset($params->password) ? $params->password : null);
-            $hashed = (isset($params->hashed) ? $params->hashed : false);
-            
-
-            if($username != null && $plainPassword != null){
-                $jwt = $this->get(JwtAuth::class);
-                
-                if($signup = $jwt->signup($username, $plainPassword, $hashed)){
-
-
-                    $data = array(
-                        'status' => "success",
-                        'data' => "success",
-                        'token' => $signup
-                    );
-                    return $this->json($signup) ;
-                    //var_dump($signup); die();
-                }else{
-                    $data = array(
-                        'status' => "error",
-                        'data' => "Password error"
-                    );
-                }
-
-
-            }else{
-                $data = array(
-                    'status' => "error",
-                    'data' => "username or password invalid"
-                );
-            }
-            
-
-        }else{
-            $data = array(
-                'status' => "error",
-                'data' => "send json via post"
-            );
-        }
-
-        return $helper->json($data);
     }
 
-
-    /**
-     * @Route("/login_check", name="login_check", methods={"POST"}))     
-     */
-
-    public function loginCheckAction(Request $request){
-        $helper = $this->get(Helpers::class);
-        $jwt = $this->get(JwtAuth::class);
-
-        $token = $request->get("authorization", null);
-
-        if($token && $jwt->checkToken($token)){
-            $data = array(
-                'status' => "success",
-                'data' => "send json via post"
-            );
-        }else{
-            $data = array(
-                'status' => "error",
-                'data' => "send json via post"
-            );
-        }
-
-        return $helper->json($data);
-
-    }
 
 
     /**
      * @Route("/security/user/new", name="new_user", methods={"POST"}))     
      */
 
-    public function newUserAction(Request $request){
+    public function newAction(Request $request){
         $helper = $this->get(Helpers::class);
         $jwt = $this->get(JwtAuth::class);
 
@@ -190,11 +70,61 @@ class UserController extends Controller
     }
 
 
+
+    /**
+     * @Route("/security/user/list", name="list_user", methods={"POST"}))     
+     */
+
+    public function ListAction(Request $request){
+        $helper = $this->get(Helpers::class);
+        $jwt = $this->get(JwtAuth::class);
+
+        $json = $request->get("json", null);
+        $params = json_decode($json);
+        $token = $request->get("authorization", null);
+
+        if($token && $jwt->checkToken($token)){
+            $identity = $jwt->checkToken($token, true); 
+            $em = $this->getDoctrine()->getManager();
+            $dql   = "SELECT u FROM AppBundle:User u";
+            $query = $em->createQuery($dql);
+
+            $paginator  = $this->get('knp_paginator');
+            $pagination = $paginator->paginate(
+                $query, /* query NOT result */
+                $request->query->getInt('page', 1)/*page number*/,
+                10/*limit per page*/
+            );
+
+            $data = array(
+                'status' => "success",
+                'code' => 200,
+                'users' => $pagination,
+                'total_users' => $pagination->getTotalItemCount(),
+                'page' => $request->query->getInt('page', 1),
+                'total_pages' => ($pagination->getTotalItemCount() / 10)
+            );          
+        }else{
+            $data = array(
+                'status' => "error",
+                'code' => 400,
+                'msg' => "You are not auth"
+            );   
+        }
+        
+
+        
+
+        return $helper->json($data);
+
+    }
+
+
     /**
      * @Route("/security/user/search/{search}", name="search_user", methods={"POST"}))     
      */
 
-    public function searchUserAction(Request $request){
+    public function searchAction(Request $request){
         $helper = $this->get(Helpers::class);
         $jwt = $this->get(JwtAuth::class);
 
