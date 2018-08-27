@@ -30,7 +30,7 @@ class UserController extends Controller
      * @Route("/security/user/new", name="new_user", methods={"POST"}))     
      */
 
-    public function newAction(Request $request){
+    public function newAction(Request $request, UserPasswordEncoderInterface $encoder){
         $helper = $this->get(Helpers::class);
         $jwt = $this->get(JwtAuth::class);
 
@@ -45,22 +45,42 @@ class UserController extends Controller
             $password = (isset($params->password) ? $params->password : null);
             $group = (isset($params->group) ? $params->group : null);
             $membership = (isset($params->membership) ? $params->membership : null);
-
+            
             if($username != null && $password != null && $group != null && $membership != null){
                 $em = $this->getDoctrine()->getManager()->getConnection();
-                $sth = $em->prepare("select * from sp_membershipselect(0,0,0,'wilmer','',1)");
+                $sth = $em->prepare("select * from sp_membershipselect(0,0,'',0,'$username')");
                 $sth->execute();
                 $result = $sth->fetch();
-                $data = array(
-                    'status'    => "success",
-                    'code'      => "200",
-                    'msg'       => $result
-                );
+                if(!$result){
+                    $user = new User();
+                    $user->setUsername($username);
+                    $plainPassword = $password;
+                    $encoded = $encoder->encodePassword($user, $plainPassword);
+                    $user->setPassword($encoded);
+                    $user->setEmail("wilmer2.ramones@gmail.com");
+                    $em = $this->getDoctrine()->getManager();
+                    $em->persist($user);
+                    $em->flush();
+
+                    $data = array(
+                        'status'    => "success",
+                        'code'      => "200",
+                        'msg'       => $result
+                    );
+                }else{
+                    $data = array(
+                        'status'    => "error",
+                        'code'      => "400",
+                        'msg'       => "Username Already Exists!!"
+                    );
+                }
+
+                
             }else{
                 $data = array(
                     'status'    => "error",
                     'code'      => "400",
-                    'msg'       => "user not created",
+                    'msg'       => "user not created, Empty fields!!",
                 );
             }
         }
