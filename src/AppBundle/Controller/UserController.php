@@ -141,6 +141,45 @@ class UserController extends Controller
 
 
     /**
+     * @Route("/security/user/show/{id}", name="show_user", methods={"POST"}))     
+     */
+
+    public function showAction($id, Request $request){
+        $helper = $this->get(Helpers::class);
+        $jwt = $this->get(JwtAuth::class);
+
+        $json = $request->get("json", null);
+        $params = json_decode($json);
+        $token = $request->get("authorization", null);
+        
+
+        if($token && $jwt->checkToken($token)){
+            $identity = $jwt->checkToken($token, true); 
+            $em = $this->getDoctrine()->getManager();
+            $user = $em->getRepository("AppBundle:User")->findOneById($id);            
+
+            $data = array(
+                'status' => "success",
+                'code' => 200,
+                'user' => $user,               
+            );          
+        }else{
+            $data = array(
+                'status' => "error",
+                'code' => 400,
+                'msg' => "You are not auth"
+            );   
+        }
+        
+
+        
+
+        return $helper->json($data);
+
+    }
+
+
+    /**
      * @Route("/security/user/search/{search}", name="search_user", methods={"POST"}))     
      */
 
