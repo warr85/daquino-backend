@@ -43,44 +43,43 @@ class UserController extends Controller
             $createdAt = new  \Datetime("now");
             $username = (isset($params->username) ? $params->username : null);
             $password = (isset($params->password) ? $params->password : null);
-            $group = (isset($params->group) ? $params->group : null);
-            $membership = (isset($params->membership) ? $params->membership : null);
-            
-            if($username != null && $password != null && $group != null && $membership != null){
-                $em = $this->getDoctrine()->getManager()->getConnection();
-                $sth = $em->prepare("select * from sp_membershipselect(0,0,'',0,'$username')");
-                $sth->execute();
-                $result = $sth->fetch();
-                if(!$result){
-                    $user = new User();
-                    $user->setUsername($username);
-                    $plainPassword = $password;
-                    $encoded = $encoder->encodePassword($user, $plainPassword);
-                    $user->setPassword($encoded);
-                    $user->setEmail("wilmer2.ramones@gmail.com");
-                    $em = $this->getDoctrine()->getManager();
-                    $em->persist($user);
-                    $em->flush();
+            $token = $request->get("authorization", null);
+        
+            if($token && $jwt->checkToken($token)){                        
+                if($username != null && $password != null ){
 
-                    $data = array(
-                        'status'    => "success",
-                        'code'      => "200",
-                        'msg'       => $result
-                    );
+                    $em = $this->getDoctrine()->getManager()->getConnection();
+                    $sth = $em->prepare("select public.sp_user_create('$username', '$password');");
+                    $exec = $sth->execute();
+                    
+
+                    if($exec){                        
+                        $data = array(
+                            'status'    => "success",
+                            'code'      => "200",
+                            'msg'       => $exec
+                        );
+                    }else{
+                        $data = array(
+                            'status'    => "error",
+                            'code'      => "400",
+                            'msg'       => "Username Already Exists!!"
+                        );
+                    }
+
+                    
                 }else{
                     $data = array(
                         'status'    => "error",
                         'code'      => "400",
-                        'msg'       => "Username Already Exists!!"
+                        'msg'       => "user not created, Empty fields!!",
                     );
                 }
-
-                
             }else{
                 $data = array(
                     'status'    => "error",
                     'code'      => "400",
-                    'msg'       => "user not created, Empty fields!!",
+                    'msg'       => "Not auth",
                 );
             }
         }
