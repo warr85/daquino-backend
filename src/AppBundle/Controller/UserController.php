@@ -35,30 +35,55 @@ class UserController extends Controller
         $jwt = $this->get(JwtAuth::class);
 
         $json = $request->get("json", null);
+        $token = $request->get("authorization", null);
         $params = json_decode($json);
         
         
-
-        if($json != null){
-            $createdAt = new  \Datetime("now");
-            $username = (isset($params->username) ? $params->username : null);
-            $password = (isset($params->password) ? $params->password : null);
-            $token = $request->get("authorization", null);
         
-            if($token && $jwt->checkToken($token)){                        
+        if($json != null){
+            if($token && $jwt->checkToken($token)){
+                
+                $createdAt = new  \Datetime("now");
+                $username = (isset($params->description) ? $params->description : null);
+                $password = (isset($params->password) ? $params->password : null);
+                $memberships = (isset($params->topics) ? $params->topics : null);
+                
+                                
                 if($username != null && $password != null ){
 
                     $em = $this->getDoctrine()->getManager()->getConnection();
-                    $sth = $em->prepare("select public.sp_user_create('$username', '$password');");
+                    $sth = $em->prepare("select public.sp_user_create('$username','$password.')");
                     $exec = $sth->execute();
                     
 
-                    if($exec){                        
-                        $data = array(
-                            'status'    => "success",
-                            'code'      => "200",
-                            'msg'       => $exec
-                        );
+                    if($exec){  
+                        if($memberships != null ){                     
+                            foreach($memberships as $membership){
+                                $sth = $em->prepare("select sp_membership_grant_insert('$membership','$username')");
+                                $exec = $sth->execute();
+                            }
+
+                            if($exec){
+                                $em = $this->getDoctrine()->getManager();
+                                $dql   = "SELECT u FROM AppBundle:Uds001 u WHERE u.description = '$username'";
+                                $query = $em->createQuery($dql);
+
+                                $user = $query->setMaxResults(1)->getOneOrNullResult();
+                                $data = array(
+                                    'status'    => "success",
+                                    'code'      => "200",
+                                    'msg'       => $exec,
+                                    'user'      => $user
+                                );
+                            }else{
+                                $data = array(
+                                    'status'    => "error",
+                                    'code'      => "400",
+                                    'msg'       => "Could not Create Permision!!"
+                                ); 
+                            }   
+                        }                
+                                             
                     }else{
                         $data = array(
                             'status'    => "error",
@@ -75,13 +100,20 @@ class UserController extends Controller
                         'msg'       => "user not created, Empty fields!!",
                     );
                 }
+                
             }else{
                 $data = array(
                     'status'    => "error",
                     'code'      => "400",
-                    'msg'       => "Not auth",
+                    'msg'       => "not Auth",
                 );
             }
+        }else{
+            $data = array(
+                'status'    => "error",
+                'code'      => "400",
+                'msg'       => "Bad headers & Params",
+            );
         }
 
         return $helper->json($data);
@@ -101,6 +133,9 @@ class UserController extends Controller
         $json = $request->get("json", null);
         $params = json_decode($json);
         $token = $request->get("authorization", null);
+        $page = $request->get("page", 1);
+        
+
         
         if($token && $jwt->checkToken($token)){
             $identity = $jwt->checkToken($token, true); 
@@ -110,9 +145,9 @@ class UserController extends Controller
 
             $paginator  = $this->get('knp_paginator');
             $pagination = $paginator->paginate(
-                $query, /* query NOT result */
-                $request->query->getInt('page', 1)/*page number*/,
-                10/*limit per page*/
+                $query,                             /* query NOT result */
+                $request->query->getInt('page', $page)  /*page number*/,
+                5                                   /*limit per page*/
             );
 
            // var_dump($pagination->getTotalItemCount()); die();
@@ -123,7 +158,7 @@ class UserController extends Controller
                 'users' => $pagination,
                 'total_users' => $pagination->getTotalItemCount(),
                 'page' => $request->query->getInt('page', 1),
-                'total_pages' => ($pagination->getTotalItemCount() / 10)
+                'total_pages' => ($pagination->getTotalItemCount() / 5)
             );          
         }else{
             $data = array(
