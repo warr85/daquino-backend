@@ -105,7 +105,7 @@ class UserController extends Controller
         if($token && $jwt->checkToken($token)){
             $identity = $jwt->checkToken($token, true); 
             $em = $this->getDoctrine()->getManager();
-            $dql   = "SELECT u FROM AppBundle:User u";
+            $dql   = "SELECT u FROM AppBundle:Uds001 u";
             $query = $em->createQuery($dql);
 
             $paginator  = $this->get('knp_paginator');
@@ -114,6 +114,8 @@ class UserController extends Controller
                 $request->query->getInt('page', 1)/*page number*/,
                 10/*limit per page*/
             );
+
+           // var_dump($pagination->getTotalItemCount()); die();
 
             $data = array(
                 'status' => "success",
@@ -154,13 +156,29 @@ class UserController extends Controller
 
         if($token && $jwt->checkToken($token)){
             $identity = $jwt->checkToken($token, true); 
-            $em = $this->getDoctrine()->getManager();
-            $user = $em->getRepository("AppBundle:User")->findOneById($id);            
+            $con = $this->getDoctrine()->getManager()->getConnection();
 
+            $sth = $con->prepare("select * from uds001 where id = $id");
+            $sth->execute();
+            $user = $sth->fetch(); 
+            
+            $result = [];
+            $username = $user["description"];
+            $user['membership'] = [];
+            $sth = $con->prepare("select column3 as name from sp_membershipselect(0,0,'',0, '$username')");
+            $sth->execute();
+            while($r = $sth->fetch()){ 
+               //$result[] = $r;
+               //var_dump($r);
+               array_push($user['membership'], $r['name']);
+            }            
+            //die();
+            //if($result) $user['membership'] = $result;
+            //if(!$result) $result = $user;
             $data = array(
                 'status' => "success",
                 'code' => 200,
-                'user' => $user,               
+                'user' => $user                
             );          
         }else{
             $data = array(
@@ -179,6 +197,66 @@ class UserController extends Controller
 
 
 
+
+    /**
+     * @Route("/security/user/permission/{username}/{role}", name="get_user_permission", methods={"POST"}))     
+     */
+
+    public function permissionAction($username, $role, Request $request){
+        $helper = $this->get(Helpers::class);
+        $jwt = $this->get(JwtAuth::class);
+
+        $json = $request->get("json", null);
+        $params = json_decode($json);
+        $token = $request->get("authorization", null);
+                
+        if($token && $jwt->checkToken($token)){
+            $identity = $jwt->checkToken($token, true); 
+            $con = $this->getDoctrine()->getManager()->getConnection();
+
+            $sth = $con->prepare("select id from uds001 where description = '$username'");
+            $sth->execute();
+            $userid = $sth->fetch(); 
+            $userid = $userid['id'];
+            
+                        
+            
+            $sth = $con->prepare("select id from uds0201 where iduds001 = '$userid' and iduds002 = '$role'");
+            $sth->execute();
+            $roleid = $sth->fetch(); 
+            //var_dump($roleid); die();
+
+                 
+            
+            if($roleid){
+                $data = array(
+                    'status' => "success",
+                    'code' => 200,
+                    'role' => true                
+                );
+            }else{
+                $data = array(
+                    'status' => "success",
+                    'code' => 200,
+                    'role' => false                
+                ); 
+            }         
+        }else{
+            $data = array(
+                'status' => "error",
+                'code' => 400,
+                'msg' => "You are not auth"
+            );   
+        }
+        
+
+        
+
+        return $helper->json($data);
+
+    }
+
+
     /**
      * @Route("/security/user/checkusername/{username}", name="checkusername", methods={"POST"}))     
      */
@@ -195,7 +273,7 @@ class UserController extends Controller
         if($token && $jwt->checkToken($token)){
             $identity = $jwt->checkToken($token, true); 
             $em = $this->getDoctrine()->getManager();
-            $user = $em->getRepository("AppBundle:User")->findOneByUsername($username);            
+            $user = $em->getRepository("AppBundle:Uds001")->findOneByDescription($username);            
             if($user){
                 $data = array(
                     'status' => "success",
