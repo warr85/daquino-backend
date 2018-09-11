@@ -56,10 +56,25 @@ class UserController extends Controller
                     $exec = $sth->execute();
                     
 
-                    if($exec){  
-                        if($memberships != null ){                     
-                            foreach($memberships as $membership){
-                                $sth = $em->prepare("select sp_membership_grant_insert('$membership','$username')");
+                    if($exec){ 
+                        $em = $this->getDoctrine()->getManager()->getConnection();
+                        $sth = $em->prepare("select groname from pg_group");
+                        $exec = $sth->execute();
+                        while($result = $sth->fetch()){
+                            $r[] = $result;
+                        }                        
+                        
+                        
+
+                        if($r != null ){                     
+                            foreach($r as $roles){                                
+                                $rol = $roles['groname'];
+                                $sth = $em->prepare("select sp_membership_grant_insert('$rol','$username')");
+                                $exec = $sth->execute();
+                            }
+
+                            foreach($memberships as $mem){
+                                $sth = $em->prepare("select sp_membership_grant('$mem','$username')"); 
                                 $exec = $sth->execute();
                             }
 
@@ -215,6 +230,113 @@ class UserController extends Controller
                 'code' => 200,
                 'user' => $user                
             );          
+        }else{
+            $data = array(
+                'status' => "error",
+                'code' => 400,
+                'msg' => "You are not auth"
+            );   
+        }
+        
+
+        
+
+        return $helper->json($data);
+
+    }
+
+
+    /**
+     * @Route("/security/user/update/permission", name="update_user_permission", methods={"POST"}))     
+     */
+
+    public function UpdatePermissionAction(Request $request){
+        $helper = $this->get(Helpers::class);
+        $jwt = $this->get(JwtAuth::class);
+
+        $json = $request->get("json", null);
+        $params = json_decode($json);
+        $token = $request->get("authorization", null);
+        
+        
+        $username = (isset($params->description) ? $params->description : null);
+        $password = (isset($params->password) ? $params->password : null);
+        $memberships = (isset($params->topics) ? $params->topics : null);        
+        
+        if($token && $jwt->checkToken($token)){
+            $identity = $jwt->checkToken($token, true); 
+            $em = $this->getDoctrine()->getManager()->getConnection();
+
+            if(isset($password)){
+                $sth2 = $em->prepare("select pass_change('$username','$password')");
+                $sth2->execute();    
+            }
+
+            if(isset($memberships)){
+                
+                $sth2 = $em->prepare("select groname as value from pg_group");
+                $sth2->execute();            
+                while($roles = $sth2->fetch()){
+                    $membership = $roles["value"];                    
+                    $sth = $em->prepare("select sp_membership_revoke('$membership','$username')"); 
+                    $exec = $sth->execute();
+                }                 
+                foreach($memberships as $mem){
+                    $sth = $em->prepare("select sp_membership_grant('$mem','$username')"); 
+                    $exec = $sth->execute();
+                }
+
+                $data = array(
+                    'status' => "success",
+                    'code' => 200,
+                    'user' => $exec                
+                ); 
+                
+                
+            }
+           
+            
+                     
+        }else{
+            $data = array(
+                'status' => "error",
+                'code' => 400,
+                'msg' => "You are not auth"
+            );   
+        }
+        
+
+        
+
+        return $helper->json($data);
+
+    }
+
+
+    /**
+     * @Route("/security/user/getRoles", name="user_all_roles", methods={"POST"}))     
+     */
+
+    public function getRolesAction(Request $request){
+        $helper = $this->get(Helpers::class);
+        $jwt = $this->get(JwtAuth::class);
+
+        $token = $request->get("authorization", null);
+
+        if($token && $jwt->checkToken($token)){
+            $identity = $jwt->checkToken($token, true); 
+            $em = $this->getDoctrine()->getManager()->getConnection();
+            $sth = $em->prepare("select groname as value from pg_group");
+            $exec = $sth->execute();            
+            while($roles = $sth->fetch()){
+                $r[]["value"] = $roles["value"]                ;
+            }            
+            
+            $data = array(
+                'status' => "success",
+                'code' => 200,
+                'topics' => $r                
+            );                                    
         }else{
             $data = array(
                 'status' => "error",
