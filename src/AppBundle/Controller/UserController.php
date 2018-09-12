@@ -210,8 +210,11 @@ class UserController extends Controller
 
             $sth = $con->prepare("select * from uds001 where id = $id");
             $sth->execute();
-            $user = $sth->fetch(); 
-            
+            $user = $sth->fetch();
+            $uds006 = array(
+                'id' => $user["iduds006"]                              
+            );
+            $user["iduds006"] = $uds006;            
             $result = [];
             $username = $user["description"];
             $user['membership'] = [];
@@ -280,12 +283,16 @@ class UserController extends Controller
                     $membership = $roles["value"];                    
                     $sth = $em->prepare("select sp_membership_revoke('$membership','$username')"); 
                     $exec = $sth->execute();
-                }                 
+                }   
+
+                
                 foreach($memberships as $mem){
+                    
                     $sth = $em->prepare("select sp_membership_grant('$mem','$username')"); 
                     $exec = $sth->execute();
+                    $r[] = $sth->fetch();
                 }
-
+                
                 $data = array(
                     'status' => "success",
                     'code' => 200,
@@ -314,7 +321,7 @@ class UserController extends Controller
 
 
     /**
-     * @Route("/security/user/getRoles", name="user_all_roles", methods={"POST"}))     
+     * @Route("/security/user/all/roles", name="user_all_roles", methods={"POST"}))     
      */
 
     public function getRolesAction(Request $request){
@@ -336,6 +343,89 @@ class UserController extends Controller
                 'status' => "success",
                 'code' => 200,
                 'topics' => $r                
+            );                                    
+        }else{
+            $data = array(
+                'status' => "error",
+                'code' => 400,
+                'msg' => "You are not auth"
+            );   
+        }
+        
+
+        
+
+        return $helper->json($data);
+
+    }
+
+
+
+    /**
+     * @Route("/security/user/disable/{id}", name="user_disable", methods={"POST"}))     
+     */
+
+    public function disableAction($id, Request $request){
+        $helper = $this->get(Helpers::class);
+        $jwt = $this->get(JwtAuth::class);
+
+        $token = $request->get("authorization", null);
+
+        if($token && $jwt->checkToken($token)){
+            $identity = $jwt->checkToken($token, true); 
+            $em = $this->getDoctrine()->getManager()->getConnection();
+            $sth = $em->prepare("select sp_disable_user($id)");
+            $exec = $sth->execute(); 
+            
+            $em = $this->getDoctrine()->getManager();
+            $dql   = "SELECT u FROM AppBundle:Uds001 u WHERE u.id = $id";
+            $query = $em->createQuery($dql); 
+            $user = $query->setMaxResults(1)->getOneOrNullResult();
+            $data = array(
+                'status' => "success",
+                'code' => 200, 
+                'user' => $user                             
+            );                                    
+        }else{
+            $data = array(
+                'status' => "error",
+                'code' => 400,
+                'msg' => "You are not auth"
+            );   
+        }
+        
+
+        
+
+        return $helper->json($data);
+
+    }
+
+
+    /**
+     * @Route("/security/user/enable/{id}", name="user_enable", methods={"POST"}))     
+     */
+
+    public function enableAction($id, Request $request){
+        $helper = $this->get(Helpers::class);
+        $jwt = $this->get(JwtAuth::class);
+
+        $token = $request->get("authorization", null);
+
+        if($token && $jwt->checkToken($token)){
+            $identity = $jwt->checkToken($token, true); 
+            $em = $this->getDoctrine()->getManager()->getConnection();
+            $sth = $em->prepare("select sp_enable_user($id)");
+            $exec = $sth->execute();                                  
+            
+            $em = $this->getDoctrine()->getManager();
+            $dql   = "SELECT u FROM AppBundle:Uds001 u WHERE u.id = $id";
+            $query = $em->createQuery($dql); 
+            $user = $query->setMaxResults(1)->getOneOrNullResult();
+            $data = array(
+                'status' => "success",
+                'code' => 200, 
+                'user' => $user                             
             );                                    
         }else{
             $data = array(
