@@ -41,18 +41,23 @@ Class JwtAuth{
 		$em = $this->manager->getConnection();
 		$sth = $em->prepare("select * from sp_membershipselect(0,0,'',0,'$username')");
 		$sth->execute();
-		$result = $sth->fetch();
-		//var_dump($result); die;
+		$r = [];
+		$id="";
+		while($result = $sth->fetch()){
+			$id = $result['column1'];
+			$r[] = md5($result['column3']);
+		}
+		//var_dump($r); die;
 
 
-		if($result) {
+		if($r) {
 			//$encoderService = $this->container->get('security.password_encoder');
 			//if($match = $encoderService->isPasswordValid($userBd, $password)){	
 
 				$token = array(
-                    "sub" => $result['column1'],
-                    "email" => $result['column5'],
-                    "roles" => $result['column3'],
+                    "sub" => $id,
+                    "description" => $username,
+                    "roles" => $r,
                     "iat" => time(),
                     "exp" => time() + (24 * 60 * 60)
                 );
