@@ -48,7 +48,7 @@ class LoginController extends Controller
                 }else{
                     $data = array(
                         'status' => "error",
-                        'data' => "Password error"
+                        'data' => "Username or Password are incorrect"
                     );
                 }
 
