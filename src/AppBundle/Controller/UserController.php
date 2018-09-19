@@ -157,23 +157,25 @@ class UserController extends Controller
             $em = $this->getDoctrine()->getManager();
             $dql   = "SELECT u FROM AppBundle:Uds001 u";
             $query = $em->createQuery($dql);
+            $all = $em->getRepository("AppBundle:Uds001")->findAll();
 
-            $paginator  = $this->get('knp_paginator');
+            /*$paginator  = $this->get('knp_paginator');
             $pagination = $paginator->paginate(
-                $query,                             /* query NOT result */
-                $request->query->getInt('page', $page)  /*page number*/,
-                5                                   /*limit per page*/
-            );
+                $query,                             
+                $request->query->getInt('page', $page)  
+                10                                   
+            );*/
 
            // var_dump($pagination->getTotalItemCount()); die();
 
             $data = array(
                 'status' => "success",
                 'code' => 200,
-                'users' => $pagination,
-                'total_users' => $pagination->getTotalItemCount(),
+                'users' => $all,
+                /*'total_users' => $pagination->getTotalItemCount(),
                 'page' => $request->query->getInt('page', 1),
-                'total_pages' => ($pagination->getTotalItemCount() / 5)
+                'total_pages' => ($pagination->getTotalItemCount() / 5),
+                'all' => $all*/
             );          
         }else{
             $data = array(
