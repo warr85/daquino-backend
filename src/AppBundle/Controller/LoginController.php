@@ -124,7 +124,7 @@ class LoginController extends Controller
                 $userEncripted = md5($username);
                 $date = new \DateTime();            
                 $date = md5($date->format("Y-m-d"));
-                $link = "http://gage.vps.co.ve/daquino-prod/backend/web/redirected?un=" . $userEncripted . "&d=" . $date ; 
+                $link = "http://gage.vps.co.ve/backend/web/redirected?un=" . $userEncripted . "&d=" . $date ; 
                 $message = (new \Swift_Message('UpperData Password Reset Instructions'))
                 ->setFrom('wilmer.ramones@gmail.com')
                 ->setTo($emailTo)
