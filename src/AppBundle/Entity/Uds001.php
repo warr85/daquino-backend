@@ -19,6 +19,14 @@ class Uds001
      */
     private $description;
 
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="email", type="string", length=18, nullable=false)
+     */
+    private $email;
+
     /**
      * @var integer
      *
@@ -51,6 +59,31 @@ class Uds001
     public function setDescription($description)
     {
         $this->description = $description;
+
+        return $this;
+    }
+
+    /**
+     * Get email
+     *
+     * @return string
+     */
+    public function getEmail()
+    {
+        return $this->email;
+    }
+
+
+    /**
+     * Set email
+     *
+     * @param string $email
+     *
+     * @return Uds001
+     */
+    public function setEmail($email)
+    {
+        $this->email = $email;
 
         return $this;
     }

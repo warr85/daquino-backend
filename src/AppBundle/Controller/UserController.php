@@ -45,14 +45,17 @@ class UserController extends Controller
                 
                 $createdAt = new  \Datetime("now");
                 $username = (isset($params->description) ? $params->description : null);
-                $password = (isset($params->password) ? $params->password : null);
+                $email = (isset($params->email) ? $params->email : null);
                 $memberships = (isset($params->topics) ? $params->topics : null);
+
+                $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_-=+;:,.?";
+                $password = substr( str_shuffle( $chars ), 0, 8 );
                 
                                 
-                if($username != null && $password != null ){
+                if($username != null && $email != null ){
 
                     $em = $this->getDoctrine()->getManager()->getConnection();
-                    $sth = $em->prepare("select public.sp_user_create('$username','$password.')");
+                    $sth = $em->prepare("select public.sp_user_create('$username','$password', '$email')");
                     $exec = $sth->execute();
                     
 
@@ -64,7 +67,33 @@ class UserController extends Controller
                             $r[] = $result;
                         }                        
                         
-                        
+                        $message = (new \Swift_Message('UpperData System Registration'))
+                            ->setFrom('wilmer.ramones@gmail.com')
+                            ->setTo($email)
+                            ->setBody(
+                                $this->renderView(
+                                    // app/Resources/views/Emails/registration.html.twig
+                                    'Emails/registration.html.twig',
+                                    array(
+                                        'name' => $username,
+                                        'password' => $password
+                                    )
+                                ),
+                                'text/html'
+                            )
+                            /*
+                            * If you also want to include a plaintext version of the message
+                            ->addPart(
+                                $this->renderView(
+                                    'Emails/registration.txt.twig',
+                                    array('name' => $name)
+                                ),
+                                'text/plain'
+                            )
+                            */
+                        ;
+
+                        $this->get('mailer')->send($message);
 
                         if($r != null ){                     
                             foreach($r as $roles){                                
@@ -428,6 +457,81 @@ class UserController extends Controller
                 'status' => "success",
                 'code' => 200, 
                 'user' => $user                             
+            );                                    
+        }else{
+            $data = array(
+                'status' => "error",
+                'code' => 400,
+                'msg' => "You are not auth"
+            );   
+        }
+        
+
+        
+
+        return $helper->json($data);
+
+    }
+
+    /**
+     * @Route("/security/user/reset/{description}", name="reset_user", methods={"POST"}))     
+     */
+
+    public function resetAction($description, Request $request){
+        $helper = $this->get(Helpers::class);
+        $jwt = $this->get(JwtAuth::class);
+
+        $token = $request->get("authorization", null);
+
+        if($token && $jwt->checkToken($token)){
+            $identity = $jwt->checkToken($token, true); 
+            $em = $this->getDoctrine()->getManager()->getConnection();
+            $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_-=+;:,.?";
+            $passwd = substr( str_shuffle( $chars ), 0, 8 );
+            $sth = $em->prepare("select pass_change('$description', '$passwd')");
+            $exec = $sth->execute();   
+            
+            $em = $this->getDoctrine()->getManager();
+            $dql   = "SELECT u FROM AppBundle:Uds001 u WHERE u.description = '$description'";
+            $query = $em->createQuery($dql); 
+            $user = $query->setMaxResults(1)->getOneOrNullResult();
+            
+            $emailTo = $user->getEmail();
+
+            $message = (new \Swift_Message('UpperData System Password Update'))
+            ->setFrom('wilmer.ramones@gmail.com')
+            ->setTo($emailTo)
+            ->setBody(
+                $this->renderView(
+                    // app/Resources/views/Emails/registration.html.twig
+                    'Emails/passwordReset.html.twig',
+                    array(
+                        'name' => $user->getDescription(),
+                        'password' => $passwd
+                    )
+                ),
+                'text/html'
+            )
+            /*
+            * If you also want to include a plaintext version of the message
+            ->addPart(
+                $this->renderView(
+                    'Emails/registration.txt.twig',
+                    array('name' => $name)
+                ),
+                'text/plain'
+            )
+            */
+        ;
+
+        $this->get('mailer')->send($message);
+
+
+
+            $data = array(
+                'status' => "success",
+                'code' => 200, 
+                'passwd' => $passwd                             
             );                                    
         }else{
             $data = array(
