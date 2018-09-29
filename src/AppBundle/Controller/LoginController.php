@@ -124,7 +124,7 @@ class LoginController extends Controller
                 $userEncripted = md5($username);
                 $date = new \DateTime();            
                 $date = md5($date->format("Y-m-d"));
-                $link = "http://127.0.0.1/daquino/backend/web/app_dev.php/redirected?un=" . $userEncripted . "&d=" . $date ; 
+                $link = "http://gage.vps.co.ve/daquino-prod/backend/web/redirected?un=" . $userEncripted . "&d=" . $date ; 
                 $message = (new \Swift_Message('UpperData Password Reset Instructions'))
                 ->setFrom('wilmer.ramones@gmail.com')
                 ->setTo($emailTo)
@@ -237,7 +237,7 @@ class LoginController extends Controller
             ;
 
             $this->get('mailer')->send($message);
-            return $this->redirect('http://127.0.0.1:4200');
+            return $this->redirect('http://gage.vps.co.ve/daquino-prod/login');
         }
 
 
