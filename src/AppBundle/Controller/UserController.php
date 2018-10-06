@@ -280,6 +280,63 @@ class UserController extends Controller
     }
 
 
+
+
+    /**
+     * @Route("/security/user/searchByDescription/{description}", name="show_user_by_description", methods={"POST"}))     
+     */
+
+    public function searchByDescriptionAction($description, Request $request){
+        $helper = $this->get(Helpers::class);
+        $jwt = $this->get(JwtAuth::class);
+
+        $json = $request->get("json", null);
+        $params = json_decode($json);
+        $token = $request->get("authorization", null);
+        
+
+        if($token && $jwt->checkToken($token)){
+            $identity = $jwt->checkToken($token, true); 
+            $con = $this->getDoctrine()->getManager()->getConnection();
+
+            $sth = $con->prepare("select * from uds001 where description = '$description'");
+            $sth->execute();
+            $user = $sth->fetch();
+            if($user){
+                $uds006 = array(
+                    'id' => $user["iduds006"]                              
+                );
+                $user["iduds006"] = $uds006;            
+                $result = [];
+                $username = $user["description"];                        
+                $data = array(
+                    'status' => "success",
+                    'code' => 200,
+                    'user' => $user                
+                );   
+            }else{
+                $data = array(
+                    'status' => "error",
+                    'code' => 400,
+                    'msg' => "User not found!"
+                ); 
+            }       
+        }else{
+            $data = array(
+                'status' => "error",
+                'code' => 400,
+                'msg' => "You are not auth"
+            );   
+        }
+        
+
+        
+
+        return $helper->json($data);
+
+    }
+
+
     /**
      * @Route("/security/user/update/permission", name="update_user_permission", methods={"POST"}))     
      */
